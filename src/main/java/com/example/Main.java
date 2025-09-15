@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main {
 
@@ -25,18 +26,24 @@ public class Main {
                 NseResponse response = downloader.fetchData();
                 System.out.println("Data fetched successfully.");
 
-                // 2. Save data to CSV
+                // 2. Filter data by the first expiry date
+                List<Data> filteredData = filterDataByFirstExpiry(response);
+                if (filteredData == null) {
+                    System.out.println("Could not filter data. Exiting round.");
+                    continue; // Skip to the next round
+                }
+
+                // 3. Save filtered data to CSV
                 String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
                 String filename = "active_contracts_" + timestamp + ".csv";
-                saveToCsv(response, filename);
+                saveToCsv(filteredData, filename);
                 downloadedFilePaths.add(filename);
-                System.out.println("Data saved to " + filename);
+                System.out.println("Filtered data saved to " + filename);
 
-                // 3. Analyze data
+                // 4. Analyze data
                 AnalysisService.analyze(downloadedFilePaths);
 
-
-                // 4. Wait for the next interval
+                // 5. Wait for the next interval
                 if (i < ROUNDS - 1) {
                     System.out.println("Waiting for 3 minutes...");
                     Thread.sleep(INTERVAL_MS);
@@ -47,33 +54,46 @@ public class Main {
                 e.printStackTrace();
             } catch (InterruptedException e) {
                 System.err.println("The sleep interval was interrupted: " + e.getMessage());
-                Thread.currentThread().interrupt(); // Restore the interrupted status
-                break; // Exit the loop if interrupted
+                Thread.currentThread().interrupt();
+                break;
             }
         }
         System.out.println("Monitoring complete after " + ROUNDS + " rounds.");
     }
 
-    private static void saveToCsv(NseResponse nseResponse, String filename) throws IOException {
-        if (nseResponse == null || nseResponse.getRecords() == null || nseResponse.getRecords().getData() == null) {
+    private static List<Data> filterDataByFirstExpiry(NseResponse nseResponse) {
+        if (nseResponse == null || nseResponse.getFiltered() == null ||
+            nseResponse.getFiltered().getExpiryDates() == null || nseResponse.getFiltered().getExpiryDates().isEmpty() ||
+            nseResponse.getFiltered().getData() == null) {
+            System.out.println("Response is missing necessary data for filtering (filtered, expiryDates, or data).");
+            return null;
+        }
+
+        String targetExpiryDate = nseResponse.getFiltered().getExpiryDates().get(0);
+
+        List<Data> allData = nseResponse.getFiltered().getData();
+        return allData.stream()
+                .filter(data -> targetExpiryDate.equals(data.getExpiryDate()))
+                .collect(Collectors.toList());
+    }
+
+    private static void saveToCsv(List<Data> dataList, String filename) throws IOException {
+        if (dataList == null || dataList.isEmpty()) {
             System.out.println("No data to save.");
             return;
         }
 
-        List<Data> dataList = nseResponse.getRecords().getData();
-
         try (CSVWriter writer = new CSVWriter(new FileWriter(filename))) {
-            // Write header
-            String[] header = {"StrikePrice", "Call_OI", "Put_OI"};
+            String[] header = {"StrikePrice", "Call_OI", "Put_OI", "ExpiryDate"};
             writer.writeNext(header);
 
-            // Write data
             for (Data data : dataList) {
                 if (data.getCallOption() != null && data.getPutOption() != null) {
                     String[] row = {
                         String.valueOf(data.getStrikePrice()),
                         String.valueOf(data.getCallOption().getOpenInterest()),
-                        String.valueOf(data.getPutOption().getOpenInterest())
+                        String.valueOf(data.getPutOption().getOpenInterest()),
+                        data.getExpiryDate()
                     };
                     writer.writeNext(row);
                 }

@@ -82,6 +82,8 @@ public class AnalysisService {
             reader.readNext(); // Skip header
 
             while ((nextLine = reader.readNext()) != null) {
+                // Expects 4 columns now: StrikePrice, Call_OI, Put_OI, ExpiryDate
+                if (nextLine.length < 3) continue; // Skip malformed rows
                 try {
                     double strikePrice = Double.parseDouble(nextLine[0]);
                     double callOI = Double.parseDouble(nextLine[1]);

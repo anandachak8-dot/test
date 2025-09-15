@@ -7,10 +7,21 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Records {
 
+    @JsonProperty("expiryDates")
+    private List<String> expiryDates;
+
     @JsonProperty("data")
     private List<Data> data;
 
     // Getters and setters
+    public List<String> getExpiryDates() {
+        return expiryDates;
+    }
+
+    public void setExpiryDates(List<String> expiryDates) {
+        this.expiryDates = expiryDates;
+    }
+
     public List<Data> getData() {
         return data;
     }

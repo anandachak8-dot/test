@@ -15,7 +15,18 @@ public class Data {
     @JsonProperty("PE")
     private Option putOption;
 
+    @JsonProperty("expiryDate")
+    private String expiryDate;
+
     // Getters and setters
+    public String getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(String expiryDate) {
+        this.expiryDate = expiryDate;
+    }
+
     public double getStrikePrice() {
         return strikePrice;
     }
