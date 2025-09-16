@@ -1,0 +1,123 @@
+{
+    "records": {
+        "expiryDates": [
+            "18-Jul-2024",
+            "25-Jul-2024",
+            "01-Aug-2024",
+            "08-Aug-2024",
+            "14-Aug-2024",
+            "22-Aug-2024",
+            "29-Aug-2024",
+            "26-Sep-2024",
+            "31-Oct-2024",
+            "28-Nov-2024",
+            "26-Dec-2024",
+            "27-Mar-2025",
+            "26-Jun-2025"
+        ],
+        "data": [
+            {
+                "strikePrice": 21000,
+                "expiryDate": "18-Jul-2024",
+                "CE": {
+                    "strikePrice": 21000,
+                    "expiryDate": "18-Jul-2024",
+                    "underlying": "NIFTY",
+                    "identifier": "OPTIDXNIFTY18-07-2024CE21000.00",
+                    "openInterest": 236,
+                    "changeinOpenInterest": -3,
+                    "pchangeinOpenInterest": -1.2552301255230126,
+                    "totalTradedVolume": 3,
+                    "impliedVolatility": 0,
+                    "lastPrice": 3000.8,
+                    "change": 0,
+                    "pChange": 0,
+                    "totalBuyQuantity": 0,
+                    "totalSellQuantity": 1,
+                    "bidQty": 0,
+                    "bidprice": 0,
+                    "askQty": 1,
+                    "askPrice": 3245.95,
+                    "underlyingValue": 24044.5
+                },
+                "PE": {
+                    "strikePrice": 21000,
+                    "expiryDate": "18-Jul-2024",
+                    "underlying": "NIFTY",
+                    "identifier": "OPTIDXNIFTY18-07-2024PE21000.00",
+                    "openInterest": 2049,
+                    "changeinOpenInterest": 0,
+                    "pchangeinOpenInterest": 0,
+                    "totalTradedVolume": 21,
+                    "impliedVolatility": 25.16,
+                    "lastPrice": 0.4,
+                    "change": -0.05,
+                    "pChange": -11.11111111111111,
+                    "totalBuyQuantity": 617,
+                    "totalSellQuantity": 0,
+                    "bidQty": 617,
+                    "bidprice": 0.4,
+                    "askQty": 0,
+                    "askPrice": 0,
+                    "underlyingValue": 24044.5
+                }
+            }
+        ],
+        "timestamp": "18-Jul-2024 10:20:01",
+        "underlyingValue": 24044.5,
+        "strikePrices": [
+            21000,
+            21050
+        ]
+    },
+    "filtered": {
+        "data": [
+            {
+                "strikePrice": 21000,
+                "expiryDate": "18-Jul-2024",
+                "CE": {
+                    "strikePrice": 21000,
+                    "expiryDate": "18-Jul-2024",
+                    "underlying": "NIFTY",
+                    "identifier": "OPTIDXNIFTY18-07-2024CE21000.00",
+                    "openInterest": 236,
+                    "changeinOpenInterest": -3,
+                    "pchangeinOpenInterest": -1.2552301255230126,
+                    "totalTradedVolume": 3,
+                    "impliedVolatility": 0,
+                    "lastPrice": 3000.8,
+                    "change": 0,
+                    "pChange": 0,
+                    "totalBuyQuantity": 0,
+                    "totalSellQuantity": 1,
+                    "bidQty": 0,
+                    "bidprice": 0,
+                    "askQty": 1,
+                    "askPrice": 3245.95,
+                    "underlyingValue": 24044.5
+                },
+                "PE": {
+                    "strikePrice": 21000,
+                    "expiryDate": "18-Jul-2024",
+                    "underlying": "NIFTY",
+                    "identifier": "OPTIDXNIFTY18-07-2024PE21000.00",
+                    "openInterest": 2049,
+                    "changeinOpenInterest": 0,
+                    "pchangeinOpenInterest": 0,
+                    "totalTradedVolume": 21,
+                    "impliedVolatility": 25.16,
+                    "lastPrice": 0.4,
+                    "change": -0.05,
+                    "pChange": -11.11111111111111,
+                    "totalBuyQuantity": 617,
+                    "totalSellQuantity": 0,
+                    "bidQty": 617,
+                    "bidprice": 0.4,
+                    "askQty": 0,
+                    "askPrice": 0,
+                    "underlyingValue": 24044.5
+                }
+            }
+        ]
+    }
+}

@@ -1,67 +1,63 @@
 package com.example;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.JavaNetCookieJar;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-
+import java.io.File;
 import java.io.IOException;
-import java.net.CookieManager;
-import java.net.CookiePolicy;
+import java.nio.file.Files;
+import java.util.Random;
 
 public class NseDownloader {
 
-    private static final String BASE_URL = "https://www.nseindia.com/";
-    private static final String API_URL = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY";
-
-    private final OkHttpClient client;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String SAMPLE_DATA_FILE = "sample-data.json";
+    private final Random random = new Random();
+    private static int roundCounter = 0;
 
     public NseDownloader() {
-        // Create a cookie manager to handle session cookies
-        CookieManager cookieManager = new CookieManager();
-        cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
-
-        // Build the OkHttpClient with the cookie jar
-        this.client = new OkHttpClient.Builder()
-                .cookieJar(new JavaNetCookieJar(cookieManager))
-                .build();
+        // No-op
     }
 
     public NseResponse fetchData() throws IOException {
-        // First, make a "warm-up" request to the base URL to get the session cookies
-        Request warmupRequest = new Request.Builder()
-                .url(BASE_URL)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .build();
+        roundCounter++;
+        System.out.println("Fetching data from local sample file: " + SAMPLE_DATA_FILE + " (Round " + roundCounter + ")");
+        File file = new File(SAMPLE_DATA_FILE);
+        if (!file.exists()) {
+            throw new IOException("Sample data file not found: " + SAMPLE_DATA_FILE);
+        }
+        String content = new String(Files.readAllBytes(file.toPath()));
+        NseResponse response = objectMapper.readValue(content, NseResponse.class);
+        response.setTimestamp(System.currentTimeMillis());
 
-        try (Response warmupResponse = client.newCall(warmupRequest).execute()) {
-            if (!warmupResponse.isSuccessful()) {
-                throw new IOException("Warm-up request failed with code " + warmupResponse);
-            }
-            // We don't need the body, just the cookies which are now stored in the cookie jar.
+        // Simulate data changes
+        simulateDataChange(response);
+
+        return response;
+    }
+
+    private void simulateDataChange(NseResponse response) {
+        if (response == null || response.getFiltered() == null || response.getFiltered().getData() == null) {
+            return;
         }
 
-        // Now, make the actual API request. OkHttp will automatically include the cookies.
-        Request apiRequest = new Request.Builder()
-                .url(API_URL)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-                .header("Accept", "application/json, text/plain, */*")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .build();
+        for (Data data : response.getFiltered().getData()) {
+            // Simulate small, random fluctuations for all options
+            if (data.getCallOption() != null) {
+                double oi = data.getCallOption().getOpenInterest();
+                double fluctuation = (random.nextDouble() * 0.1) - 0.05; // between -5% and +5%
+                data.getCallOption().setOpenInterest(oi * (1 + fluctuation));
+            }
+            if (data.getPutOption() != null) {
+                double oi = data.getPutOption().getOpenInterest();
+                double fluctuation = (random.nextDouble() * 0.1) - 0.05; // between -5% and +5%
+                data.getPutOption().setOpenInterest(oi * (1 + fluctuation));
+            }
 
-        try (Response response = client.newCall(apiRequest).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IOException("API request failed with code " + response);
+            // On round 4, introduce a large change to test the alert
+            if (roundCounter == 4 && data.getCallOption() != null) {
+                System.out.println(">>> Introducing a large OI change for testing alerts. <<<");
+                double oi = data.getCallOption().getOpenInterest();
+                data.getCallOption().setOpenInterest(oi * 1.5); // 50% increase
             }
-            if (response.body() == null) {
-                throw new IOException("Response body is null");
-            }
-            String responseBody = response.body().string();
-            return objectMapper.readValue(responseBody, NseResponse.class);
         }
     }
 }

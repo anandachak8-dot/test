@@ -18,10 +18,21 @@ public class NseResponse {
         this.filtered = filtered;
     }
 
+    private long timestamp;
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
     @Override
     public String toString() {
         return "NseResponse{" +
                 "filtered=" + filtered +
+                ", timestamp=" + timestamp +
                 '}';
     }
 }
