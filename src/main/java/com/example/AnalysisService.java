@@ -1,67 +1,103 @@
 package com.example;
 
-import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvValidationException;
-
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class AnalysisService {
 
     private static final double ALERT_THRESHOLD = 30.0; // 30%
+    private static final int[] INTERVALS_IN_MINUTES = {3, 5, 10, 15};
 
-    public static void analyze(List<String> filePaths) {
-        if (filePaths.size() < 2) {
-            System.out.println("Not enough data to perform analysis. Need at least 2 files.");
-            return;
-        }
-
+    public static void analyze(Connection connection) {
         System.out.println("--- Starting Analysis ---");
-
         try {
-            String latestFile = filePaths.get(filePaths.size() - 1);
-            Map<Double, double[]> latestData = readCsvToMap(latestFile);
-
-            // Compare with up to 3 previous files
-            for (int i = 1; i <= 3 && (filePaths.size() - 1 - i) >= 0; i++) {
-                String historicalFile = filePaths.get(filePaths.size() - 1 - i);
-                Map<Double, double[]> historicalData = readCsvToMap(historicalFile);
-                int minutesAgo = i * 3;
-
-                compareData(latestData, historicalData, minutesAgo);
+            long latestTimestamp = getLatestTimestamp(connection);
+            if (latestTimestamp == 0) {
+                System.out.println("Not enough data to perform analysis.");
+                return;
             }
 
-        } catch (IOException | CsvValidationException e) {
+            OiTotals latestOi = getOiTotalsForTimestamp(connection, latestTimestamp);
+            if (latestOi == null) {
+                System.out.println("Could not calculate OI for the latest data point.");
+                return;
+            }
+
+            for (int minutesAgo : INTERVALS_IN_MINUTES) {
+                long historicalTimestamp = findHistoricalTimestamp(connection, latestTimestamp, minutesAgo);
+                if (historicalTimestamp != 0) {
+                    OiTotals historicalOi = getOiTotalsForTimestamp(connection, historicalTimestamp);
+                    if (historicalOi != null) {
+                        System.out.printf("Comparing with data from ~%d minutes ago...\n", minutesAgo);
+                        compareAndAlert(latestOi, historicalOi, minutesAgo);
+                    }
+                } else {
+                    System.out.printf("No data found for ~%d minutes ago. Skipping comparison.\n", minutesAgo);
+                }
+            }
+
+        } catch (SQLException e) {
             System.err.println("Error during analysis: " + e.getMessage());
             e.printStackTrace();
         }
         System.out.println("--- Analysis Complete ---");
     }
 
-    private static void compareData(Map<Double, double[]> latestData, Map<Double, double[]> historicalData, int minutesAgo) {
-        for (Map.Entry<Double, double[]> entry : latestData.entrySet()) {
-            double strikePrice = entry.getKey();
-            double[] latestOIs = entry.getValue();
-
-            if (historicalData.containsKey(strikePrice)) {
-                double[] historicalOIs = historicalData.get(strikePrice);
-                // 0: Call OI, 1: Put OI
-
-                // Compare Call OI
-                checkAndAlert(strikePrice, "Call", latestOIs[0], historicalOIs[0], minutesAgo);
-                // Compare Put OI
-                checkAndAlert(strikePrice, "Put", latestOIs[1], historicalOIs[1], minutesAgo);
+    private static long getLatestTimestamp(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT MAX(timestamp) FROM OPTION_DATA")) {
+            if (rs.next()) {
+                return rs.getLong(1);
             }
         }
+        return 0;
     }
 
-    private static void checkAndAlert(double strikePrice, String optionType, double newOI, double oldOI, int minutesAgo) {
+    private static long findHistoricalTimestamp(Connection conn, long latestTimestamp, int minutesAgo) throws SQLException {
+        long targetTimestamp = latestTimestamp - (long) minutesAgo * 60 * 1000;
+        String sql = "SELECT MAX(timestamp) FROM OPTION_DATA WHERE timestamp <= ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, targetTimestamp);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        }
+        return 0;
+    }
+
+    private static OiTotals getOiTotalsForTimestamp(Connection conn, long timestamp) throws SQLException {
+        String sql = "SELECT optionType, SUM(openInterest) FROM OPTION_DATA WHERE timestamp = ? GROUP BY optionType";
+        double totalCallOi = 0;
+        double totalPutOi = 0;
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, timestamp);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String optionType = rs.getString(1);
+                double totalOi = rs.getDouble(2);
+                if ("CE".equals(optionType)) {
+                    totalCallOi = totalOi;
+                } else if ("PE".equals(optionType)) {
+                    totalPutOi = totalOi;
+                }
+            }
+        }
+        return new OiTotals(totalCallOi, totalPutOi);
+    }
+
+    private static void compareAndAlert(OiTotals latestOi, OiTotals historicalOi, int minutesAgo) {
+        checkAndAlert("Call", latestOi.getTotalCallOi(), historicalOi.getTotalCallOi(), minutesAgo);
+        checkAndAlert("Put", latestOi.getTotalPutOi(), historicalOi.getTotalPutOi(), minutesAgo);
+    }
+
+    private static void checkAndAlert(String optionType, double newOI, double oldOI, int minutesAgo) {
         if (oldOI == 0) {
             if (newOI > 0) {
-                System.out.printf("ALERT: Strike Price %.2f - %s OI is new (was 0) in the last %d minutes.\n", strikePrice, optionType, minutesAgo);
+                System.out.printf("ALERT: Total %s OI is new (was 0) in the last %d minutes.\n", optionType, minutesAgo);
             }
             return;
         }
@@ -70,30 +106,29 @@ public class AnalysisService {
 
         if (Math.abs(percentChange) > ALERT_THRESHOLD) {
             String direction = percentChange > 0 ? "increased" : "decreased";
-            System.out.printf("ALERT: Strike Price %.2f - %s OI has %s by %.2f%% in the last %d minutes. (From %.0f to %.0f)\n",
-                    strikePrice, optionType, direction, Math.abs(percentChange), minutesAgo, oldOI, newOI);
+            System.out.printf("!!! ALERT !!! Total %s OI has %s by %.2f%% in the last %d minutes. (From %.0f to %.0f)\n",
+                    optionType, direction, Math.abs(percentChange), minutesAgo, oldOI, newOI);
+        } else {
+            System.out.printf("INFO: Total %s OI change in last %d minutes is %.2f%% (not over threshold).\n",
+                    optionType, minutesAgo, percentChange);
         }
     }
 
-    private static Map<Double, double[]> readCsvToMap(String filePath) throws IOException, CsvValidationException {
-        Map<Double, double[]> dataMap = new HashMap<>();
-        try (CSVReader reader = new CSVReader(new FileReader(filePath))) {
-            String[] nextLine;
-            reader.readNext(); // Skip header
+    private static class OiTotals {
+        private final double totalCallOi;
+        private final double totalPutOi;
 
-            while ((nextLine = reader.readNext()) != null) {
-                // Expects 4 columns now: StrikePrice, Call_OI, Put_OI, ExpiryDate
-                if (nextLine.length < 3) continue; // Skip malformed rows
-                try {
-                    double strikePrice = Double.parseDouble(nextLine[0]);
-                    double callOI = Double.parseDouble(nextLine[1]);
-                    double putOI = Double.parseDouble(nextLine[2]);
-                    dataMap.put(strikePrice, new double[]{callOI, putOI});
-                } catch (NumberFormatException e) {
-                    // Ignore rows with malformed numbers
-                }
-            }
+        public OiTotals(double totalCallOi, double totalPutOi) {
+            this.totalCallOi = totalCallOi;
+            this.totalPutOi = totalPutOi;
         }
-        return dataMap;
+
+        public double getTotalCallOi() {
+            return totalCallOi;
+        }
+
+        public double getTotalPutOi() {
+            return totalPutOi;
+        }
     }
 }
