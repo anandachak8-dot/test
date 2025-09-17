@@ -29,11 +29,23 @@ public class Option {
         this.openInterest = openInterest;
     }
 
+    @JsonProperty("lastPrice")
+    private double lastPrice;
+
+    public double getLastPrice() {
+        return lastPrice;
+    }
+
+    public void setLastPrice(double lastPrice) {
+        this.lastPrice = lastPrice;
+    }
+
     @Override
     public String toString() {
         return "Option{" +
                 "strikePrice=" + strikePrice +
                 ", openInterest=" + openInterest +
+                ", lastPrice=" + lastPrice +
                 '}';
     }
 }

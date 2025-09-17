@@ -30,6 +30,28 @@ public class Records {
         this.data = data;
     }
 
+    @JsonProperty("underlyingValue")
+    private double underlyingValue;
+
+    @JsonProperty("strikePrices")
+    private List<Double> strikePrices;
+
+    public double getUnderlyingValue() {
+        return underlyingValue;
+    }
+
+    public void setUnderlyingValue(double underlyingValue) {
+        this.underlyingValue = underlyingValue;
+    }
+
+    public List<Double> getStrikePrices() {
+        return strikePrices;
+    }
+
+    public void setStrikePrices(List<Double> strikePrices) {
+        this.strikePrices = strikePrices;
+    }
+
     @Override
     public String toString() {
         return "Records{" +

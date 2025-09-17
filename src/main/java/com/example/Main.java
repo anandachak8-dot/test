@@ -5,8 +5,9 @@ import java.sql.SQLException;
 
 public class Main {
 
-    private static final int ROUNDS = 100;
-    private static final long INTERVAL_MS = 60 * 1000; // 1 minute
+    private static final int TOTAL_RUNS = 100;
+    private static final long INTERVAL_MINUTES = 1;
+    private static final String SYMBOL = "NIFTY"; // Configurable symbol
 
     public static void main(String[] args) {
         NseDownloader downloader = new NseDownloader();
@@ -14,33 +15,23 @@ public class Main {
 
         try {
             dbService.initialize();
+            System.out.println("Starting monitoring for symbol: " + SYMBOL);
 
-            for (int i = 0; i < ROUNDS; i++) {
-                System.out.println("Round " + (i + 1) + "/" + ROUNDS + ": Fetching data...");
+            for (int i = 0; i < TOTAL_RUNS; i++) {
+                System.out.println("Round " + (i + 1) + "/" + TOTAL_RUNS + ": Processing " + SYMBOL);
+                NseResponse response = downloader.fetchData(SYMBOL);
+                dbService.insertData(response, SYMBOL);
+                System.out.println("Data for " + SYMBOL + " stored in H2 database. Underlying Value: " + response.getRecords().getUnderlyingValue());
+                AnalysisService.analyze(dbService.getConnection(), SYMBOL, response.getRecords());
 
-                // 1. Fetch data
-                NseResponse response = downloader.fetchData();
-                System.out.println("Data fetched.");
-
-                // 2. Store data in H2 database
-                dbService.insertData(response);
-                System.out.println("Data stored in H2 database.");
-
-                // 3. Analyze data
-                AnalysisService.analyze(dbService.getConnection());
-
-                // 4. Wait for the next interval
-                if (i < ROUNDS - 1) {
-                    System.out.println("Waiting for 1 minute...");
-                    Thread.sleep(INTERVAL_MS);
+                if (i < TOTAL_RUNS - 1) {
+                    System.out.println("Waiting for " + INTERVAL_MINUTES + " minute(s)...");
+                    Thread.sleep(INTERVAL_MINUTES * 60 * 1000);
                 }
             }
-
-        } catch (IOException | SQLException e) {
+        } catch (IOException | SQLException | InterruptedException e) {
             System.err.println("An error occurred: " + e.getMessage());
             e.printStackTrace();
-        } catch (InterruptedException e) {
-            System.err.println("The sleep interval was interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();
         } finally {
             try {
@@ -50,6 +41,6 @@ public class Main {
                 e.printStackTrace();
             }
         }
-        System.out.println("Monitoring complete after " + ROUNDS + " rounds.");
+        System.out.println("Monitoring complete.");
     }
 }

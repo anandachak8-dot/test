@@ -6,6 +6,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NseResponse {
 
+    @JsonProperty("records")
+    private Records records;
+
     @JsonProperty("filtered")
     private Records filtered;
 
@@ -28,10 +31,15 @@ public class NseResponse {
         this.timestamp = timestamp;
     }
 
+    public Records getRecords() {
+        return records;
+    }
+
     @Override
     public String toString() {
         return "NseResponse{" +
-                "filtered=" + filtered +
+                "records=" + records +
+                ", filtered=" + filtered +
                 ", timestamp=" + timestamp +
                 '}';
     }

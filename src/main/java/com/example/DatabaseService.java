@@ -23,38 +23,44 @@ public class DatabaseService {
         try (Statement stmt = connection.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS OPTION_DATA (" +
                          "id INT AUTO_INCREMENT PRIMARY KEY," +
+                         "symbol VARCHAR(255)," +
                          "timestamp BIGINT," +
                          "expiryDate VARCHAR(255)," +
                          "strikePrice DOUBLE," +
                          "optionType VARCHAR(2)," + // "CE" or "PE"
-                         "openInterest DOUBLE)";
+                         "openInterest DOUBLE," +
+                         "lastPrice DOUBLE)";
             stmt.executeUpdate(sql);
         }
     }
 
-    public void insertData(NseResponse response) throws SQLException {
+    public void insertData(NseResponse response, String symbol) throws SQLException {
         if (response == null || response.getFiltered() == null || response.getFiltered().getData() == null) {
             return;
         }
 
-        String sql = "INSERT INTO OPTION_DATA (timestamp, expiryDate, strikePrice, optionType, openInterest) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO OPTION_DATA (symbol, timestamp, expiryDate, strikePrice, optionType, openInterest, lastPrice) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             for (Data data : response.getFiltered().getData()) {
                 if (data.getCallOption() != null) {
-                    pstmt.setLong(1, response.getTimestamp());
-                    pstmt.setString(2, data.getExpiryDate());
-                    pstmt.setDouble(3, data.getStrikePrice());
-                    pstmt.setString(4, "CE");
-                    pstmt.setDouble(5, data.getCallOption().getOpenInterest());
+                    pstmt.setString(1, symbol);
+                    pstmt.setLong(2, response.getTimestamp());
+                    pstmt.setString(3, data.getExpiryDate());
+                    pstmt.setDouble(4, data.getStrikePrice());
+                    pstmt.setString(5, "CE");
+                    pstmt.setDouble(6, data.getCallOption().getOpenInterest());
+                    pstmt.setDouble(7, data.getCallOption().getLastPrice());
                     pstmt.addBatch();
                 }
                 if (data.getPutOption() != null) {
-                    pstmt.setLong(1, response.getTimestamp());
-                    pstmt.setString(2, data.getExpiryDate());
-                    pstmt.setDouble(3, data.getStrikePrice());
-                    pstmt.setString(4, "PE");
-                    pstmt.setDouble(5, data.getPutOption().getOpenInterest());
+                    pstmt.setString(1, symbol);
+                    pstmt.setLong(2, response.getTimestamp());
+                    pstmt.setString(3, data.getExpiryDate());
+                    pstmt.setDouble(4, data.getStrikePrice());
+                    pstmt.setString(5, "PE");
+                    pstmt.setDouble(6, data.getPutOption().getOpenInterest());
+                    pstmt.setDouble(7, data.getPutOption().getLastPrice());
                     pstmt.addBatch();
                 }
             }
