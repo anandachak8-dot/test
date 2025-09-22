@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,6 +53,8 @@ public class AnalysisService {
         if (allStrikes == null || allStrikes.isEmpty()) {
             return Collections.emptyList();
         }
+
+        Collections.sort(allStrikes);
 
         double closestStrike = -1;
         double minDiff = Double.MAX_VALUE;

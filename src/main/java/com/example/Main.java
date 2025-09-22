@@ -2,6 +2,8 @@ package com.example;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
 
@@ -34,12 +36,7 @@ public class Main {
             e.printStackTrace();
             Thread.currentThread().interrupt();
         } finally {
-            try {
-                dbService.close();
-                System.out.println("Database connection closed.");
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            dbService.close();
         }
         System.out.println("Monitoring complete.");
     }

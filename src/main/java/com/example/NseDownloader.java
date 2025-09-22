@@ -25,21 +25,25 @@ public class NseDownloader {
             throw new IOException("Sample data file not found: " + SAMPLE_DATA_FILE);
         }
         String content = new String(Files.readAllBytes(file.toPath()));
+        // Create a deep copy by serializing and deserializing
         NseResponse response = objectMapper.readValue(content, NseResponse.class);
-        response.setTimestamp(System.currentTimeMillis());
+        String responseAsString = objectMapper.writeValueAsString(response);
+        NseResponse deepCopy = objectMapper.readValue(responseAsString, NseResponse.class);
 
-        // Simulate data changes
-        simulateDataChange(response, symbol);
+        deepCopy.setTimestamp(System.currentTimeMillis());
 
-        return response;
+        // Simulate data changes on the deep copy
+        simulateDataChange(deepCopy, symbol);
+
+        return deepCopy;
     }
 
     private void simulateDataChange(NseResponse response, String symbol) {
-        if (response == null || response.getFiltered() == null || response.getFiltered().getData() == null) {
+        if (response == null || response.getRecords() == null || response.getRecords().getData() == null) {
             return;
         }
 
-        for (Data data : response.getFiltered().getData()) {
+        for (Data data : response.getRecords().getData()) {
             // Simulate small, random fluctuations for all options
             if (data.getCallOption() != null) {
                 double oi = data.getCallOption().getOpenInterest();
