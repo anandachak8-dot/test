@@ -6,19 +6,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NseResponse {
 
-    @JsonProperty("filtered")
-    private Records filtered;
-
-    // Getters and setters
-    public Records getFiltered() {
-        return filtered;
-    }
-
-    public void setFiltered(Records filtered) {
-        this.filtered = filtered;
-    }
+    @JsonProperty("records")
+    private Records records;
 
     private long timestamp;
+
+    public Records getRecords() {
+        return records;
+    }
+
+    public void setRecords(Records records) {
+        this.records = records;
+    }
 
     public long getTimestamp() {
         return timestamp;
@@ -26,13 +25,5 @@ public class NseResponse {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
-    }
-
-    @Override
-    public String toString() {
-        return "NseResponse{" +
-                "filtered=" + filtered +
-                ", timestamp=" + timestamp +
-                '}';
     }
 }

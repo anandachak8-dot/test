@@ -6,4 +6,5 @@ com/example/Data.class
 com/example/NseResponse.class
 com/example/Records.class
 com/example/Main.class
+com/example/AnalysisService$OiDetail.class
 com/example/NseDownloader.class

@@ -12,7 +12,9 @@ public class Option {
     @JsonProperty("openInterest")
     private double openInterest;
 
-    // Getters and setters
+    @JsonProperty("lastPrice")
+    private double lastPrice;
+
     public double getStrikePrice() {
         return strikePrice;
     }
@@ -29,11 +31,11 @@ public class Option {
         this.openInterest = openInterest;
     }
 
-    @Override
-    public String toString() {
-        return "Option{" +
-                "strikePrice=" + strikePrice +
-                ", openInterest=" + openInterest +
-                '}';
+    public double getLastPrice() {
+        return lastPrice;
+    }
+
+    public void setLastPrice(double lastPrice) {
+        this.lastPrice = lastPrice;
     }
 }

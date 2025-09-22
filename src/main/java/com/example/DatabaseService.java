@@ -1,5 +1,7 @@
 package com.example;
 
+import org.h2.tools.Server;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -13,8 +15,13 @@ public class DatabaseService {
     private static final String DB_PASSWORD = "";
 
     private Connection connection;
+    private Server webServer;
 
     public void initialize() throws SQLException {
+        webServer = Server.createWebServer("-web", "-webAllowOthers", "-webPort", "8082").start();
+        System.out.println("H2 Console available at: " + webServer.getURL());
+        System.out.println("Connect to JDBC URL: " + DB_URL);
+
         connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
         createTable();
     }
@@ -23,38 +30,44 @@ public class DatabaseService {
         try (Statement stmt = connection.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS OPTION_DATA (" +
                          "id INT AUTO_INCREMENT PRIMARY KEY," +
+                         "symbol VARCHAR(255)," +
                          "timestamp BIGINT," +
                          "expiryDate VARCHAR(255)," +
                          "strikePrice DOUBLE," +
                          "optionType VARCHAR(2)," + // "CE" or "PE"
-                         "openInterest DOUBLE)";
+                         "openInterest DOUBLE," +
+                         "lastPrice DOUBLE)";
             stmt.executeUpdate(sql);
         }
     }
 
-    public void insertData(NseResponse response) throws SQLException {
-        if (response == null || response.getFiltered() == null || response.getFiltered().getData() == null) {
+    public void insertData(NseResponse response, String symbol) throws SQLException {
+        if (response == null || response.getRecords() == null || response.getRecords().getData() == null) {
             return;
         }
 
-        String sql = "INSERT INTO OPTION_DATA (timestamp, expiryDate, strikePrice, optionType, openInterest) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO OPTION_DATA (symbol, timestamp, expiryDate, strikePrice, optionType, openInterest, lastPrice) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            for (Data data : response.getFiltered().getData()) {
+            for (Data data : response.getRecords().getData()) {
                 if (data.getCallOption() != null) {
-                    pstmt.setLong(1, response.getTimestamp());
-                    pstmt.setString(2, data.getExpiryDate());
-                    pstmt.setDouble(3, data.getStrikePrice());
-                    pstmt.setString(4, "CE");
-                    pstmt.setDouble(5, data.getCallOption().getOpenInterest());
+                    pstmt.setString(1, symbol);
+                    pstmt.setLong(2, response.getTimestamp());
+                    pstmt.setString(3, data.getExpiryDate());
+                    pstmt.setDouble(4, data.getStrikePrice());
+                    pstmt.setString(5, "CE");
+                    pstmt.setDouble(6, data.getCallOption().getOpenInterest());
+                    pstmt.setDouble(7, data.getCallOption().getLastPrice());
                     pstmt.addBatch();
                 }
                 if (data.getPutOption() != null) {
-                    pstmt.setLong(1, response.getTimestamp());
-                    pstmt.setString(2, data.getExpiryDate());
-                    pstmt.setDouble(3, data.getStrikePrice());
-                    pstmt.setString(4, "PE");
-                    pstmt.setDouble(5, data.getPutOption().getOpenInterest());
+                    pstmt.setString(1, symbol);
+                    pstmt.setLong(2, response.getTimestamp());
+                    pstmt.setString(3, data.getExpiryDate());
+                    pstmt.setDouble(4, data.getStrikePrice());
+                    pstmt.setString(5, "PE");
+                    pstmt.setDouble(6, data.getPutOption().getOpenInterest());
+                    pstmt.setDouble(7, data.getPutOption().getLastPrice());
                     pstmt.addBatch();
                 }
             }
@@ -66,9 +79,16 @@ public class DatabaseService {
         return connection;
     }
 
-    public void close() throws SQLException {
-        if (connection != null && !connection.isClosed()) {
-            connection.close();
+    public void close() {
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        if (webServer != null && webServer.isRunning(true)) {
+            webServer.stop();
         }
     }
 }

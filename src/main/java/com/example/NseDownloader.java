@@ -11,35 +11,39 @@ public class NseDownloader {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String SAMPLE_DATA_FILE = "sample-data.json";
     private final Random random = new Random();
-    private static int roundCounter = 0;
+    private int roundCounter = 0;
 
     public NseDownloader() {
         // No-op
     }
 
-    public NseResponse fetchData() throws IOException {
+    public NseResponse fetchData(String symbol) throws IOException {
         roundCounter++;
-        System.out.println("Fetching data from local sample file: " + SAMPLE_DATA_FILE + " (Round " + roundCounter + ")");
+        System.out.println("Fetching data for " + symbol + " from local sample file: " + SAMPLE_DATA_FILE + " (Simulation Round " + roundCounter + ")");
         File file = new File(SAMPLE_DATA_FILE);
         if (!file.exists()) {
             throw new IOException("Sample data file not found: " + SAMPLE_DATA_FILE);
         }
         String content = new String(Files.readAllBytes(file.toPath()));
+        // Create a deep copy by serializing and deserializing
         NseResponse response = objectMapper.readValue(content, NseResponse.class);
-        response.setTimestamp(System.currentTimeMillis());
+        String responseAsString = objectMapper.writeValueAsString(response);
+        NseResponse deepCopy = objectMapper.readValue(responseAsString, NseResponse.class);
 
-        // Simulate data changes
-        simulateDataChange(response);
+        deepCopy.setTimestamp(System.currentTimeMillis());
 
-        return response;
+        // Simulate data changes on the deep copy
+        simulateDataChange(deepCopy, symbol);
+
+        return deepCopy;
     }
 
-    private void simulateDataChange(NseResponse response) {
-        if (response == null || response.getFiltered() == null || response.getFiltered().getData() == null) {
+    private void simulateDataChange(NseResponse response, String symbol) {
+        if (response == null || response.getRecords() == null || response.getRecords().getData() == null) {
             return;
         }
 
-        for (Data data : response.getFiltered().getData()) {
+        for (Data data : response.getRecords().getData()) {
             // Simulate small, random fluctuations for all options
             if (data.getCallOption() != null) {
                 double oi = data.getCallOption().getOpenInterest();
@@ -52,9 +56,9 @@ public class NseDownloader {
                 data.getPutOption().setOpenInterest(oi * (1 + fluctuation));
             }
 
-            // On round 4, introduce a large change to test the alert
-            if (roundCounter == 4 && data.getCallOption() != null) {
-                System.out.println(">>> Introducing a large OI change for testing alerts. <<<");
+            // On round 4, introduce a large change to test the alert for NIFTY
+            if (roundCounter == 4 && "NIFTY".equals(symbol) && data.getCallOption() != null) {
+                System.out.println(">>> Introducing a large OI change for NIFTY for testing alerts. <<<");
                 double oi = data.getCallOption().getOpenInterest();
                 data.getCallOption().setOpenInterest(oi * 1.5); // 50% increase
             }

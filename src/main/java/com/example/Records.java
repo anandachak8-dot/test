@@ -13,7 +13,12 @@ public class Records {
     @JsonProperty("data")
     private List<Data> data;
 
-    // Getters and setters
+    @JsonProperty("underlyingValue")
+    private double underlyingValue;
+
+    @JsonProperty("strikePrices")
+    private List<Double> strikePrices;
+
     public List<String> getExpiryDates() {
         return expiryDates;
     }
@@ -30,10 +35,19 @@ public class Records {
         this.data = data;
     }
 
-    @Override
-    public String toString() {
-        return "Records{" +
-                "data=" + data +
-                '}';
+    public double getUnderlyingValue() {
+        return underlyingValue;
+    }
+
+    public void setUnderlyingValue(double underlyingValue) {
+        this.underlyingValue = underlyingValue;
+    }
+
+    public List<Double> getStrikePrices() {
+        return strikePrices;
+    }
+
+    public void setStrikePrices(List<Double> strikePrices) {
+        this.strikePrices = strikePrices;
     }
 }
